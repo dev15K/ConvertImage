@@ -17,6 +17,7 @@ class PdfController extends Controller
         $request->validate([
             'pdf1' => 'required|file|mimes:pdf|max:20480',
             'pdf2' => 'required|file|mimes:pdf|max:20480',
+            'file_name' => 'nullable|string|max:200',
         ]);
 
         $pdf = new Fpdi();
@@ -41,10 +42,24 @@ class PdfController extends Controller
 
         $content = $pdf->Output('S');
 
-        $fileName = pathinfo(
+        $fileName = $request->input('file_name') ? 'TC16_CC_' . trim((string)$request->input('file_name')) : '';
+
+        if ($fileName === '') {
+            $fileName = pathinfo(
                 $request->file('pdf1')->getClientOriginalName(),
                 PATHINFO_FILENAME
-            ) . '.pdf';
+            );
+        }
+
+        $fileName = preg_replace('/\.pdf$/i', '', $fileName);
+        $fileName = preg_replace('/[\/\\\\:*?"<>|]/', '_', $fileName);
+        $fileName = trim($fileName, " .\t\n\r\0\x0B");
+
+        if ($fileName === '') {
+            $fileName = 'merged_pdf';
+        }
+
+        $fileName .= '.pdf';
 
         return response()->streamDownload(
             function () use ($content) {
